@@ -1,6 +1,7 @@
+import { IUserRepository } from '../repositories/IUserRepository';
 import { User } from '../entities/User';
 
-export class InMemoryUserRepo {
+export class InMemoryUserRepo implements IUserRepository {
   private users: User[] = [];
 
   async save(user: User): Promise<void> {
@@ -15,3 +16,4 @@ export class InMemoryUserRepo {
     return this.users;
   }
 }
+
