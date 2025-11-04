@@ -1,0 +1,34 @@
+name: Visual TDD CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  chromatic:
+    name: Chromatic Visual Testing
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd apps/frontend
+          npm install
+
+      - name: Run Chromatic
+        run: |
+          cd apps/frontend
+          npx chromatic --project-token=$CHROMATIC_PROJECT_TOKEN --exit-once-uploaded
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
