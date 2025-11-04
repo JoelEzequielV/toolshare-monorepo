@@ -1,5 +1,5 @@
 import { IUserRepository } from '../repositories/IUserRepository';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../entities/User';
 

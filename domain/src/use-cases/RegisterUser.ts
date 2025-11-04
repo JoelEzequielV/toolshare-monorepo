@@ -1,7 +1,8 @@
 import { User } from '../entities/User';
 import { IUserRepository } from '../repositories/IUserRepository';
 import { randomUUID } from 'crypto';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+
 
 export class RegisterUser {
   constructor(private userRepo: IUserRepository) {}

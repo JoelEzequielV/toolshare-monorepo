@@ -17,7 +17,16 @@ export class InMemoryToolRepo implements IToolRepository {
     return this.tools.find(t => t.id === id);
   }
 
+
   async getAll(): Promise<Tool[]> {
-    return this.tools;
+    return [...this.tools]; 
+  }
+
+  async delete(id: string): Promise<void> {
+    this.tools = this.tools.filter(t => t.id !== id);
+  }
+
+  async clear(): Promise<void> {
+    this.tools = [];
   }
 }
