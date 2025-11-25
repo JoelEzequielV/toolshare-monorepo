@@ -1,75 +1,29 @@
-import express from 'express';
-import cors from 'cors';
-import { InMemoryUserRepo } from '../../../domain/src/services/InMemoryUserRepo';
-import { InMemoryToolRepo } from '../../../domain/src/services/InMemoryToolRepo';
-import { RegisterUser } from '../../../domain/src/use-cases/RegisterUser';
-import { LoginUser } from '../../../domain/src/use-cases/LoginUser';
-import { AddTool } from '../../../domain/src/use-cases/AddTool';
-import { LoanTool } from '../../../domain/src/use-cases/LoanTool';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { loginController, registerController } from "./controllers/authController";
+import { listTools, createTool, loanTool } from "./controllers/toolController";
+import { authMiddleware } from "./middleware/auth";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:6006"] })); // dev + storybook origin
 
-app.use(cors({
-  origin: 'http://localhost:5173', // permite solo tu frontend
-}));
+// Auth routes (exponemos ambas formas para compatibilidad)
+app.post("/auth/login", loginController);
+app.post("/auth/register", registerController);
+app.post("/login", loginController);
+app.post("/register", registerController);
 
-const userRepo = new InMemoryUserRepo();
-const toolRepo = new InMemoryToolRepo();
+// Tools
+app.get("/tools", listTools);
+// proteger creación y préstamo de herramientas
+app.post("/tools", authMiddleware, createTool);
+app.post("/tools/:id/loan", authMiddleware, loanTool);
 
-const registerUser = new RegisterUser(userRepo);
-const loginUser = new LoginUser(userRepo);
-const addTool = new AddTool(toolRepo);
-const loanTool = new LoanTool(toolRepo);
-
-
-app.get('/tools', async (req, res) => {
-  try {
-    const tools = await toolRepo.getAll();
-    res.json(tools);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Backend escuchando en http://localhost:${PORT}`);
 });
-
-app.post('/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const user = await registerUser.execute(name, email, password);
-    res.status(201).json(user);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const { user, token } = await loginUser.execute(email, password);
-    res.json({ user, token });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.post('/tools', async (req, res) => {
-  try {
-    const { name, description } = req.body;
-    const tool = await addTool.execute(name, description);
-    res.status(201).json(tool);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.post('/tools/:id/loan', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await loanTool.execute(id);
-    res.json({ message: 'Tool loaned successfully' });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));

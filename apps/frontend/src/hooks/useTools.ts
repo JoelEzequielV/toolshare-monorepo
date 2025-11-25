@@ -6,19 +6,19 @@ import { toolRepository } from "../services/toolRepository";
 
 export const useTools = (token?: string) => {
   const [tools, setTools] = useState<Tool[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUseCase = new FetchToolsUseCase(toolRepository);
   const addUseCase = new AddToolUseCase(toolRepository);
 
-  const loadTools = async () => {
+  const load = async () => {
     try {
       setLoading(true);
       const data = await fetchUseCase.execute();
       setTools(data);
     } catch (err) {
-      setError("Error al cargar herramientas");
+      setError((err as Error).message || "Error al cargar herramientas");
     } finally {
       setLoading(false);
     }
@@ -31,7 +31,7 @@ export const useTools = (token?: string) => {
   };
 
   useEffect(() => {
-    loadTools();
+    load();
   }, []);
 
   return { tools, loading, error, addTool };

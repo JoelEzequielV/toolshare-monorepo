@@ -1,28 +1,38 @@
-import { useContext, useState } from "react";
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { LoginUseCase } from "../usecases/loginUseCase";
 import { authRepository } from "../services/authRepository";
-import { AuthContext } from "../context/AuthContext";
 
 const LoginPage = () => {
-  const { login } = useContext(AuthContext);
-
+  const { loginContext } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const loginUseCase = new LoginUseCase(authRepository);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { token, user } = await loginUseCase.execute(email, password);
-    login(user, token);
+    setErr(null);
+    setLoading(true);
+    try {
+      const { token, user } = await loginUseCase.execute(email, password);
+      loginContext(user, token);
+    } catch (error) {
+      setErr((error as Error).message || "Error en login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={onSubmit}>
       <h2>Iniciar sesión</h2>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-      <input value={password} type="password" onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" />
-      <button type="submit">Ingresar</button>
+      {err && <p style={{ color: "red" }}>{err}</p>}
+      <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button disabled={loading}>{loading ? "Cargando..." : "Ingresar"}</button>
     </form>
   );
 };
