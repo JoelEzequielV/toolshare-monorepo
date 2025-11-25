@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt
+    networks:
+      - ts-network
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-toolshare}
+      POSTGRES_USER: ${DB_USER:-toolshare}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    secrets:
+      - db_password
+    networks:
+      - ts-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER:-toolshare}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASS}@db:5432/${DB_NAME}
+      PORT: 3001
+      NODE_ENV: production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=le"
+    networks:
+      - ts-network
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+    networks:
+      - ts-network
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  traefik-letsencrypt:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+networks:
+  ts-network:
+    driver: bridge
