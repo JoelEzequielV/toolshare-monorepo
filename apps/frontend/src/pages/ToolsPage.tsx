@@ -1,48 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import { getTools, addTool } from '../services/api';
-import { ToolCard } from '../components/ToolCard';
+import { useContext, useState } from "react";
+import { useTools } from "../hooks/useTools";
+import { AuthContext } from "../context/AuthContext";
 
-export const ToolsPage: React.FC = () => {
-  const [tools, setTools] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: '', description: '' });
+const ToolsPage = () => {
+  const { token } = useContext(AuthContext);
+  const { tools, loading, error, addTool } = useTools(token ?? undefined);
 
-  useEffect(() => {
-    getTools().then(setTools).catch(console.error);
-  }, []);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newTool = await addTool(form.name, form.description);
-    setTools([...tools, newTool]);
-    setForm({ name: '', description: '' });
+    await addTool({ name, description, available: true });
+    setName("");
+    setDescription("");
   };
 
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Mis Herramientas</h1>
-      <form onSubmit={handleSubmit} style={{ marginBottom: '1rem' }}>
-        <input
-          style={{ margin: '0.5rem', padding: '0.5rem' }}
-          type="text"
-          placeholder="Nombre"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-        <input
-         style={{ margin: '0.5rem', padding: '0.5rem' }}
-          type="text"
-          placeholder="Descripción"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-        <button type="submit">Agregar</button>
-      </form>
+  if (loading) return <p>Cargando...</p>;
+  if (error) return <p>{error}</p>;
 
-      <div style={{ display: 'grid', gap: '1rem', color: 'black' }}>
-        {tools.map((tool) => (
-          <ToolCard key={tool.id} {...tool} />
+  return (
+    <>
+      <h1>Herramientas</h1>
+
+      {token && (
+        <form onSubmit={onSubmit}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
+          <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción" />
+          <button type="submit">Agregar</button>
+        </form>
+      )}
+
+      <ul>
+        {tools.map(t => (
+          <li key={t.id}>{t.name} — {t.available ? "Disponible" : "Prestada"}</li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </>
   );
 };
+
+export default ToolsPage;

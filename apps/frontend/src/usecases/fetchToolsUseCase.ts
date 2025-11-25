@@ -1,7 +1,11 @@
-export const fetchToolsUseCase = (repo: { fetchAll: () => Promise<any[]> }) => {
-    return async () => {
-    const items = await repo.fetchAll();
-    // aquí puedes mapear/validar según entidades del dominio
-    return items;
-    }
-    }
+import { Tool } from "../types/Tool";
+
+export class FetchToolsUseCase {
+  constructor(
+    private repo: { fetchAll: () => Promise<Tool[]> }
+  ) {}
+
+  async execute(): Promise<Tool[]> {
+    return await this.repo.fetchAll();
+  }
+}
